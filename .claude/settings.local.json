@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\admin\\\\Unity\\\\Crossy Road Clone\")",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

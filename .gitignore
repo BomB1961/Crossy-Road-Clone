@@ -1,0 +1,26 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[O]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+
+# Visual Studio / Rider
+*.csproj.user
+*.sln.docstates
+.vs/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Packages
+/*.unitypackage.meta
+
+# IDE
+*.sln.meta
+*.csproj.meta
