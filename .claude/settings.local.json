@@ -25,7 +25,8 @@
       "Bash(dir \"C:/Users/admin/.claude/\")",
       "WebFetch(domain:en.wikipedia.org)",
       "WebFetch(domain:www.gamezebo.com)",
-      "WebFetch(domain:www.ldplayer.net)"
+      "WebFetch(domain:www.ldplayer.net)",
+      "WebFetch(domain:docs.unity.cn)"
     ]
   }
 }
