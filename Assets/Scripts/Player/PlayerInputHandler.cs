@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
 
 /// <summary>
 /// 이동 방향 열거형
@@ -16,7 +15,7 @@ public enum MoveDirection
 }
 
 /// <summary>
-/// 플레이어 입력 처리 핸들러 - Input System 사용
+/// 플레이어 입력 처리 핸들러 - Input System 콜백 방식
 /// </summary>
 public class PlayerInputHandler : MonoBehaviour
 {
@@ -40,55 +39,45 @@ public class PlayerInputHandler : MonoBehaviour
             moveAction = playerActionMap.FindAction("Move");
             lookAction = playerActionMap.FindAction("Look");
             jumpAction = playerActionMap.FindAction("Jump");
-
-            // 점프 액션 콜백 바인딩
-            jumpAction.performed += OnJumpPerformed;
         }
     }
 
     private void OnEnable()
     {
+        // 콜백 등록
         moveAction?.Enable();
         lookAction?.Enable();
         jumpAction?.Enable();
+
+        // moveAction: 키를 누른瞬间만 입력 발생 (started 사용)
+        moveAction.started += OnMoveStarted;
+
+        // jumpAction: 키를 누른瞬間만 입력 발생
+        jumpAction.started += OnJumpStarted;
     }
 
     private void OnDisable()
     {
-        jumpAction.performed -= OnJumpPerformed;
+        // 콜백 해제
+        moveAction.started -= OnMoveStarted;
+        jumpAction.started -= OnJumpStarted;
 
         moveAction?.Disable();
         lookAction?.Disable();
         jumpAction?.Disable();
     }
 
-    private void Update()
-    {
-        // 이동 입력 처리
-        ProcessMoveInput();
-    }
-
     /// <summary>
-    /// 점프 액션 콜백
+    /// 이동 입력 시작 시 호출 (키를 누른瞬間)
     /// </summary>
-    private void OnJumpPerformed(InputAction.CallbackContext context)
+    private void OnMoveStarted(InputAction.CallbackContext context)
     {
-        OnDirectionDecided?.Invoke(MoveDirection.Forward);
-    }
-
-    /// <summary>
-    /// 이동 입력 처리 (WASD, 방향키, 조이패드)
-    /// </summary>
-    private void ProcessMoveInput()
-    {
-        if (moveAction == null) return;
-
-        Vector2 move = moveAction.ReadValue<Vector2>();
+        Vector2 move = context.ReadValue<Vector2>();
 
         // Dead Zone
         if (move.magnitude < 0.1f) return;
 
-        // Y축 입력을 Forward/Back으로 변환
+        // 방향 판정 (한 번만 호출됨)
         if (move.y > 0.1f)
         {
             OnDirectionDecided?.Invoke(MoveDirection.Forward);
@@ -97,9 +86,7 @@ public class PlayerInputHandler : MonoBehaviour
         {
             OnDirectionDecided?.Invoke(MoveDirection.Back);
         }
-
-        // X축 입력을 Left/Right로 변환
-        if (move.x > 0.1f)
+        else if (move.x > 0.1f)
         {
             OnDirectionDecided?.Invoke(MoveDirection.Right);
         }
@@ -107,5 +94,13 @@ public class PlayerInputHandler : MonoBehaviour
         {
             OnDirectionDecided?.Invoke(MoveDirection.Left);
         }
+    }
+
+    /// <summary>
+    /// 점프 입력 시작 시 호출 (키를 누른瞬間)
+    /// </summary>
+    private void OnJumpStarted(InputAction.CallbackContext context)
+    {
+        OnDirectionDecided?.Invoke(MoveDirection.Forward);
     }
 }

@@ -5,9 +5,9 @@ using UnityEngine;
 /// </summary>
 public class PlayerController : MonoBehaviour, IPlayerController
 {
-    [Header("이동 설정")]
-    [SerializeField] private float jumpDuration = 0.2f; // 점프 시간
-    [SerializeField] private float jumpHeight = 0.5f;    // 점프 높이
+    [Header("점프 설정")]
+    [SerializeField] private float jumpDuration = 0.2f;  // 점프 시간
+    [SerializeField] private float jumpHeight = 0.5f;     // 점프 높이
 
     [Header("위치 설정")]
     [SerializeField] private LayerMask obstacleLayer;     // 레이캐스트 장애물 레이어
@@ -113,10 +113,6 @@ public class PlayerController : MonoBehaviour, IPlayerController
     /// <summary>
     /// 방향 벡터 변환 (화면 → 3D 월드)
     /// </summary>
-    /// <remarks>
-    /// 쿼터뷰 카메라 설정에 따라 방향이 달라질 수 있음.
-    /// 기본: 카메라가 -Z 방향에서 +Y 높이로 내려다보는 설정
-    /// </remarks>
     private Vector3 GetDirectionVector(MoveDirection direction)
     {
         switch (direction)
@@ -126,9 +122,9 @@ public class PlayerController : MonoBehaviour, IPlayerController
             case MoveDirection.Back:
                 return new Vector3(0, 0, -1);  // -Z (화면 아래쪽)
             case MoveDirection.Right:
-                return new Vector3(-1, 0, 0);  // -X (화면 오른쪽) - 쿼터뷰 따라 다름
+                return new Vector3(1, 0, 0);   // +X (화면 오른쪽)
             case MoveDirection.Left:
-                return new Vector3(1, 0, 0);   // +X (화면 왼쪽) - 쿼터뷰 따라 다름
+                return new Vector3(-1, 0, 0);  // -X (화면 왼쪽)
             default:
                 return Vector3.zero;
         }
