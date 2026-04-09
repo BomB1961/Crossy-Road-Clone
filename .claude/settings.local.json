@@ -2,7 +2,30 @@
   "permissions": {
     "allow": [
       "Bash(dir \"C:\\\\Users\\\\admin\\\\Unity\\\\Crossy Road Clone\")",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "WebFetch(domain:www.crossyroad.com)",
+      "mcp__MiniMax__web_search",
+      "WebFetch(domain:crossyroad.fandom.com)",
+      "WebFetch(domain:www.bluestacks.com)",
+      "WebFetch(domain:crossyroadgame.io)",
+      "WebFetch(domain:archive.org)",
+      "WebFetch(domain:namu.wiki)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:poki.com)",
+      "WebFetch(domain:play.google.com)",
+      "WebFetch(domain:m.blog.naver.com)",
+      "WebFetch(domain:photics.com)",
+      "WebFetch(domain:docs.unity3d.com)",
+      "WebFetch(domain:rimugiri.tistory.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:unity.com)",
+      "mcp__MiniMax__understand_image",
+      "Read(//c/Users/admin/.claude/**)",
+      "Bash(dir \"C:/Users/admin/.claude/\")",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:www.gamezebo.com)",
+      "WebFetch(domain:www.ldplayer.net)"
     ]
   }
 }

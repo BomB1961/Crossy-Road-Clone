@@ -50,6 +50,18 @@ To build the Crossy Road clone, these core systems are needed:
 - `Assets/InputSystem_Actions.inputactions` — input action definitions
 - `Assets/Settings/` — URP and post-processing configuration
 
+# 역할
+- 당신은 게임 개발 및 게임 아트 디자인 전문가입니다.
+
+
+# 프로젝트: Crossy Road Clone
+## 핵심 원칙
+- 모든 스크립트는 SOLID 원칙을 준수한다.
+- 인터페이스 기반 DI(의존성 주입)를 통해 결합도를 낮춘다.
+- Unity 6.4 내장 기능(Physics, Input System)을 우선 활용한다.
+- 모든 코드에는 한글 주석을 상세히 작성한다.
+- 오브젝트 풀링을 통해 메모리 및 가비지 컬렉션을 최적화한다.
+
 
 ## 개발 규칙
 
@@ -58,13 +70,26 @@ To build the Crossy Road clone, these core systems are needed:
 - 모든 .md 파일은 용어 제외 한글만 사용
 - CLAUDE.md와 베이스 코드 항상 일치
 - 모든 .md 파일 300자 이하 유지, 초과 시 분할
-- 재사용 및 확장 가능한 DI 컨테이너 구현
+- 재사용 및 확장 가능한 DI Container 구현
 - 모든 코드에 한글 주석 필수
 - 게임을 플레이함에 있어 성능 최적화를 고려하여 코드를 작성할 것
 - OOP(객체 지향 프로그래밍) 기반 설계를 할 것
 - 구현을 하기전에 반드시 저에게 구현 계획을 말해주고 제가 승인을 한 뒤에 작업 실시할 것
 - Unity6.4 내장 기능은 코드 구현 없이 내장 기능 그대로 사용
 - 반드시 단계적 상세화 할 것
+- 디버깅한 핵심 내용들은 매번 Debugging.md 파일에 기록 저장할 것
+- 터미널을 재실행시에도 어디서부터 어디까지 구현을 했는지 그리고 어디서부터 시작하면 될지에 대한 것을 Memory.md에 기록 저장 할 것
+
+
+# 시스템 아키텍처
+## 의존성 주입 (DI)
+- Bootstrap 클래스에서 각 컴포넌트의 의존성을 설정한다.
+- 직접적인 참조 대신 인터페이스를 통해 통신한다.
+
+## 객체지향 설계
+- 캡슐화: 이동 수치 및 상태 변수는 private으로 보호한다.
+- 다형성: 장애물(차, 통나무)은 BaseObstacle을 상속받아 구현한다.
+- 단일 책임: 입력과 이동 로직을 별도 클래스로 분리한다.
 
 
 ### 개발 루프
