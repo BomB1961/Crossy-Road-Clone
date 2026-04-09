@@ -2,31 +2,39 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 레인 생성기 - 랜덤 레인 타입 생성 및 관리
+/// 테마 구간 열거형
+/// </summary>
+public enum ZoneType
+{
+    Forest,  // 잔디 (GrassLane)
+    City     // 도로 (RoadLane)
+}
+
+/// <summary>
+/// 레인 생성기 - 구간별 테마 기반 레인 생성
 /// </summary>
 public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
 {
     [Header("레인 설정")]
     [SerializeField] private int visibleLaneCount = 9;
     [SerializeField] private float laneHeight = 1f;
-    [SerializeField] private float generateAheadDistance = 5f; //Ahead多远生成
+    [SerializeField] private float generateAheadDistance = 5f;
 
-    [Header("레인 타입 가중치")]
-    [SerializeField] private int grassWeight = 40;
-    [SerializeField] private int roadWeight = 30;
-    [SerializeField] private int riverWeight = 15;
-    [SerializeField] private int railroadWeight = 15;
+    [Header("구간 설정")]
+    [SerializeField] private int lanesPerZone = 9;  // 구간당 레인 수
+
+    // 구간 관리
+    private ZoneType currentZone = ZoneType.Forest;
+    private int lanesInCurrentZone = 0;
 
     // 레인 관리
     private ObjectPool<BaseLane> lanePool;
     private List<BaseLane> activeLanes = new List<BaseLane>();
     private int currentRow = 0;
 
-    // 레인 프리팹 (추후 할당)
+    // 레인 프리팹
     private BaseLane grassLanePrefab;
     private BaseLane roadLanePrefab;
-    private BaseLane riverLanePrefab;
-    private BaseLane railroadLanePrefab;
 
     public int LaneCount => activeLanes.Count;
 
@@ -44,17 +52,14 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     }
 
     /// <summary>
-    /// 레인 프리팹 로드 (폴백 처리 포함)
+    /// 레인 프리팹 로드
     /// </summary>
     private void LoadLanePrefabs()
     {
-        //Resources 폴더에서 로드 시도
+        //Resources 폴더에서 로드
         grassLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/GrassLane");
         roadLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RoadLane");
-        riverLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RiverLane");
-        railroadLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RailroadLane");
 
-        // 로드 실패 시 로그 출력 (디버깅용)
         #if UNITY_EDITOR
         if (grassLanePrefab == null)
             Debug.LogWarning("[TerrainGenerator] GrassLane 프리팹을 찾을 수 없습니다. Resources/Prefabs/Lanes/에 배치하세요.");
@@ -81,6 +86,9 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         BaseLane lane = RentLane(type);
         lane.Initialize(row);
         activeLanes.Add(lane);
+
+        // 구간 내 레인 카운트 증가
+        IncrementLaneCount();
 
         currentRow = Mathf.Max(currentRow, row);
     }
@@ -118,27 +126,43 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         }
         activeLanes.Clear();
         currentRow = 0;
+        currentZone = ZoneType.Forest;
+        lanesInCurrentZone = 0;
     }
 
     /// <summary>
-    /// 랜덤 레인 타입 결정 (가중치 기반)
+    /// 구간 기반 레인 타입 결정
+    /// Forest → GrassLane, City → RoadLane
     /// </summary>
     private LaneType DecideLaneType()
     {
-        int totalWeight = grassWeight + roadWeight + riverWeight + railroadWeight;
-        int randomValue = Random.Range(0, totalWeight);
+        // 구간당 레인 수 도달 시 구간 전환
+        if (lanesInCurrentZone >= lanesPerZone)
+        {
+            SwitchZone();
+        }
 
-        int cumulative = 0;
-        cumulative += grassWeight;
-        if (randomValue < cumulative) return LaneType.Grass;
+        // 현재 구간에 맞는 레인 타입 반환
+        return currentZone == ZoneType.Forest ? LaneType.Grass : LaneType.Road;
+    }
 
-        cumulative += roadWeight;
-        if (randomValue < cumulative) return LaneType.Road;
+    /// <summary>
+    /// 구간 전환 (Forest ↔ City)
+    /// </summary>
+    private void SwitchZone()
+    {
+        currentZone = currentZone == ZoneType.Forest ? ZoneType.City : ZoneType.Forest;
+        lanesInCurrentZone = 0;
 
-        cumulative += riverWeight;
-        if (randomValue < cumulative) return LaneType.River;
+        Debug.Log($"[TerrainGenerator] 구간 전환: {currentZone}");
+    }
 
-        return LaneType.Railroad;
+    /// <summary>
+    /// 레인 생성 후 카운트 증가
+    /// </summary>
+    private void IncrementLaneCount()
+    {
+        lanesInCurrentZone++;
     }
 
     /// <summary>
@@ -168,10 +192,6 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
                 return laneObj.AddComponent<GrassLane>();
             case LaneType.Road:
                 return laneObj.AddComponent<RoadLane>();
-            case LaneType.River:
-                return laneObj.AddComponent<RiverLane>();
-            case LaneType.Railroad:
-                return laneObj.AddComponent<RailroadLane>();
             default:
                 return laneObj.AddComponent<GrassLane>();
         }
@@ -186,8 +206,6 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         {
             case LaneType.Grass: return grassLanePrefab;
             case LaneType.Road: return roadLanePrefab;
-            case LaneType.River: return riverLanePrefab;
-            case LaneType.Railroad: return railroadLanePrefab;
             default: return grassLanePrefab;
         }
     }

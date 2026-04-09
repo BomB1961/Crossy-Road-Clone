@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 장애물 베이스 클래스 - 모든 장애물의 공통 기능 제공
 /// </summary>
-public abstract class BaseObstacle : MonoBehaviour, IObstacle
+public class BaseObstacle : MonoBehaviour, IObstacle
 {
     [Header("장애물 기본 설정")]
     [SerializeField] protected int row = 0;
@@ -41,7 +41,10 @@ public abstract class BaseObstacle : MonoBehaviour, IObstacle
     }
 
     /// <summary>
-    /// 이동 로직 (자식 클래스에서 구현)
+    /// 이동 로직 (자식 클래스에서 오버라이드)
     /// </summary>
-    public abstract void Move();
+    public virtual void Move()
+    {
+        // 기본 이동 로직 - 자식 클래스에서 오버라이드
+    }
 }

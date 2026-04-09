@@ -89,8 +89,16 @@ public class Bootstrap : MonoBehaviour
         gameManager = gameManagerComp;
 
         // 플레이어 컨트롤러 설정
-        if (playerPrefab != null && playerSpawnPoint != null)
+        // 먼저 scene에서 기존 PlayerController 찾기
+        var existingPlayer = FindObjectOfType<PlayerController>();
+        if (existingPlayer != null)
         {
+            // 에디터 작업 중: 기존 Player 사용
+            playerController = existingPlayer;
+        }
+        else if (playerPrefab != null && playerSpawnPoint != null)
+        {
+            // 게임 플레이 시: PlayerPrefab에서 생성
             var playerObj = Instantiate(playerPrefab, playerSpawnPoint.position, Quaternion.identity);
             playerController = playerObj.GetComponent<IPlayerController>();
         }
@@ -137,13 +145,13 @@ public class Bootstrap : MonoBehaviour
     }
 
     /// <summary>
-    /// 새 레인 생성 (풀링용)
+    /// 새 레인 생성 (풀링용) - 구체적인 레인 타입 사용
     /// </summary>
     private BaseLane CreateNewLane()
     {
-        // 추후 프리팹에서 생성
         var laneObj = new GameObject("Lane");
-        return laneObj.AddComponent<BaseLane>();
+        BaseLane lane = laneObj.AddComponent<GrassLane>(); // 기본값
+        return lane;
     }
 
     /// <summary>
@@ -152,7 +160,8 @@ public class Bootstrap : MonoBehaviour
     private BaseObstacle CreateNewObstacle()
     {
         var obsObj = new GameObject("Obstacle");
-        return obsObj.AddComponent<BaseObstacle>();
+        BaseObstacle obs = obsObj.AddComponent<BaseObstacle>(); // BaseObstacle은 abstract 불가
+        return obs;
     }
 
     /// <summary>

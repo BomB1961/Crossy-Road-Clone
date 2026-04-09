@@ -1,138 +1,109 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 
 /// <summary>
 /// 이동 방향 열거형
 /// </summary>
+[System.Serializable]
 public enum MoveDirection
 {
     None,
-    Forward,  // +Z
-    Back,     // -Z
-    Right,    // +X
-    Left      // -X
+    Forward,
+    Back,
+    Right,
+    Left
 }
 
 /// <summary>
-/// 플레이어 입력 처리 핸들러 - 터치/키보드/게임패드 입력 감지
+/// 플레이어 입력 처리 핸들러 - Input System 사용
 /// </summary>
 public class PlayerInputHandler : MonoBehaviour
 {
-    [Header("터치 설정")]
-    [SerializeField] private float swipeThreshold = 50f; // px 기준
-    [SerializeField] private float tapThreshold = 50f;
+    [Header("입력 설정")]
+    [SerializeField] private InputActionAsset inputActions;
 
-    // 터치 데이터
-    private Vector2 touchStartPosition;
-    private Vector2 touchEndPosition;
-    private bool isTouching = false;
+    // 입력 액션
+    private InputAction moveAction;
+    private InputAction lookAction;
+    private InputAction jumpAction;
 
     // 이벤트
     public event System.Action<MoveDirection> OnDirectionDecided;
 
+    private void Awake()
+    {
+        // Input Action Asset에서 Player 액션맵 가져오기
+        var playerActionMap = inputActions?.FindActionMap("Player");
+        if (playerActionMap != null)
+        {
+            moveAction = playerActionMap.FindAction("Move");
+            lookAction = playerActionMap.FindAction("Look");
+            jumpAction = playerActionMap.FindAction("Jump");
+
+            // 점프 액션 콜백 바인딩
+            jumpAction.performed += OnJumpPerformed;
+        }
+    }
+
+    private void OnEnable()
+    {
+        moveAction?.Enable();
+        lookAction?.Enable();
+        jumpAction?.Enable();
+    }
+
+    private void OnDisable()
+    {
+        jumpAction.performed -= OnJumpPerformed;
+
+        moveAction?.Disable();
+        lookAction?.Disable();
+        jumpAction?.Disable();
+    }
+
     private void Update()
     {
-        // 터치 입력 처리
-        ProcessTouchInput();
-
-        // 키보드 입력 (개발/PC 테스트용)
-        ProcessKeyboardInput();
+        // 이동 입력 처리
+        ProcessMoveInput();
     }
 
     /// <summary>
-    /// 터치 입력 처리 (On Finger Up 기준)
+    /// 점프 액션 콜백
     /// </summary>
-    private void ProcessTouchInput()
+    private void OnJumpPerformed(InputAction.CallbackContext context)
     {
-        if (Input.touchCount == 0)
-            return;
-
-        Touch touch = Input.GetTouch(0);
-
-        switch (touch.phase)
-        {
-            case TouchPhase.Began:
-                touchStartPosition = touch.position;
-                isTouching = true;
-                break;
-
-            case TouchPhase.Ended:
-                if (isTouching)
-                {
-                    touchEndPosition = touch.position;
-                    JudgeDirection();
-                    isTouching = false;
-                }
-                break;
-
-            case TouchPhase.Canceled:
-                isTouching = false;
-                break;
-        }
+        OnDirectionDecided?.Invoke(MoveDirection.Forward);
     }
 
     /// <summary>
-    /// 터치 거리/방향 판정
+    /// 이동 입력 처리 (WASD, 방향키, 조이패드)
     /// </summary>
-    private void JudgeDirection()
+    private void ProcessMoveInput()
     {
-        Vector2 delta = touchEndPosition - touchStartPosition;
-        float distance = delta.magnitude;
+        if (moveAction == null) return;
 
-        // Tap: 거리 < 임계값
-        if (distance < tapThreshold)
-        {
-            OnDirectionDecided?.Invoke(MoveDirection.Forward);
-            return;
-        }
+        Vector2 move = moveAction.ReadValue<Vector2>();
 
-        // Swipe: 거리 ≥ 임계값 - 방향 판정
-        float absX = Mathf.Abs(delta.x);
-        float absY = Mathf.Abs(delta.y);
+        // Dead Zone
+        if (move.magnitude < 0.1f) return;
 
-        if (absY > absX)
-        {
-            // 상하 방향
-            if (delta.y > 0)
-            {
-                OnDirectionDecided?.Invoke(MoveDirection.Forward); // Swipe Up
-            }
-            else
-            {
-                OnDirectionDecided?.Invoke(MoveDirection.Back);    // Swipe Down
-            }
-        }
-        else
-        {
-            // 좌우 방향
-            if (delta.x > 0)
-            {
-                OnDirectionDecided?.Invoke(MoveDirection.Right);  // Swipe Right
-            }
-            else
-            {
-                OnDirectionDecided?.Invoke(MoveDirection.Left);    // Swipe Left
-            }
-        }
-    }
-
-    /// <summary>
-    /// 키보드 입력 (PC/개발용)
-    /// </summary>
-    private void ProcessKeyboardInput()
-    {
-        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+        // Y축 입력을 Forward/Back으로 변환
+        if (move.y > 0.1f)
         {
             OnDirectionDecided?.Invoke(MoveDirection.Forward);
         }
-        else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
+        else if (move.y < -0.1f)
         {
             OnDirectionDecided?.Invoke(MoveDirection.Back);
         }
-        else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+
+        // X축 입력을 Left/Right로 변환
+        if (move.x > 0.1f)
         {
             OnDirectionDecided?.Invoke(MoveDirection.Right);
         }
-        else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+        else if (move.x < -0.1f)
         {
             OnDirectionDecided?.Invoke(MoveDirection.Left);
         }

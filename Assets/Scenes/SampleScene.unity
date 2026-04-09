@@ -858,8 +858,49 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4291562733582379327, guid: 06003f25452254640af8a67fda045e65, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4226094405107176576}
+    - targetCorrespondingSourceObject: {fileID: 4291562733582379327, guid: 06003f25452254640af8a67fda045e65, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4226094405107176575}
   m_SourcePrefab: {fileID: 100100000, guid: 06003f25452254640af8a67fda045e65, type: 3}
+--- !u!1 &4226094405107176574 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4291562733582379327, guid: 06003f25452254640af8a67fda045e65, type: 3}
+  m_PrefabInstance: {fileID: 4226094405107176573}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4226094405107176575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4226094405107176574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f30bb6387d2be67449f486fd07434e89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInputHandler
+  inputActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+--- !u!114 &4226094405107176576
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4226094405107176574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f41a59444d81f984893c01da018346f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  jumpDuration: 0.2
+  jumpHeight: 0.5
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
