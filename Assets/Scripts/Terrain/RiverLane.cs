@@ -2,80 +2,153 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 강 레인 - 물 + 배(보트) 이동 장애물 + 고정 장애물 없음
+/// 강 레인 - 배 이동 장애물 (좌→우) + 목재/나무/식물/돌 고정 장애물
 /// </summary>
 public class RiverLane : BaseLane
 {
-    [Header("강 레인 설정")]
-    [SerializeField] private int laneWidth = 7;        //レーン幅
-    [SerializeField] private float spawnInterval = 2.5f; // 배 생성 간격
+    [Header("레이너 설정")]
+    [SerializeField] private int laneWidth = 7;
+    [SerializeField] private float leftBoundary = -8f;
+    [SerializeField] private float rightBoundary = 8f;
 
-    [Header("배 Prefabs")]
-    [SerializeField] private GameObject[] boatPrefabs;
+    [Header("고정 장애물 (FixedOnly)")]
+    [SerializeField] private GameObject[] fixedObstaclePrefabs;  // 목재, 나무, 식물, 돌
+    [SerializeField] private int minFixedCount = 2;
+    [SerializeField] private int maxFixedCount = 4;
+    [SerializeField] private float minGap = 1.5f;
+
+    [Header("이동 장애물 (MovingOnly)")]
+    [SerializeField] private GameObject[] movingObstaclePrefabs;  // 배 종류별
+    [SerializeField] private float[] speeds;                       // 각 종류의 속도
+    [SerializeField] private float spawnInterval = 2.5f;
+
+    // 장애물 타입
+    private ObstacleType currentType = ObstacleType.FixedOnly;
+
+    // 고정 장애물 관리
+    private List<GameObject> fixedObstacles = new List<GameObject>();
 
     // 이동 장애물 관리
     private float timeSinceLastSpawn = 0f;
-    private int direction = 1;
-    private List<GameObject> activeBoats = new List<GameObject>();
 
     public override void Initialize(int row)
     {
-        base.Initialize(row);
-
-        // 방향 랜덤 결정
-        direction = Random.Range(0, 2) == 0 ? 1 : -1;
-
-        // 고정 장애물 없음 (River는 이동 장애물만)
-
-        // 초기 배 생성
-        GenerateObstacles();
+        Initialize(row, ObstacleType.FixedOnly);
     }
 
     /// <summary>
-    /// 초기 배 생성
+    /// ObstacleType 기반 초기화
     /// </summary>
-    public override void GenerateObstacles()
+    public void Initialize(int row, ObstacleType type)
     {
-        if (boatPrefabs == null || boatPrefabs.Length == 0)
-            return;
+        base.Initialize(row);
+        currentType = type;
 
-        int initialCount = Random.Range(1, 2);
-        for (int i = 0; i < initialCount; i++)
+        ClearAllObstacles();
+
+        if (type == ObstacleType.FixedOnly)
         {
-            SpawnBoat();
+            GenerateFixedObstacles();
+        }
+        else // MovingOnly
+        {
+            timeSinceLastSpawn = 0f;
         }
     }
 
     /// <summary>
-    /// 배 생성
+    /// 고정 장애물 생성 (균형 잡힌 랜덤 배치)
     /// </summary>
-    private void SpawnBoat()
+    private void GenerateFixedObstacles()
     {
-        if (boatPrefabs == null || boatPrefabs.Length == 0)
+        if (fixedObstaclePrefabs == null || fixedObstaclePrefabs.Length == 0)
             return;
 
-        GameObject prefab = boatPrefabs[Random.Range(0, boatPrefabs.Length)];
-        float startX = direction > 0 ? -laneWidth / 2f - 1f : laneWidth / 2f + 1f;
+        int count = Random.Range(minFixedCount, maxFixedCount + 1);
+        List<float> occupiedPositions = new List<float>();
 
-        Vector3 spawnPos = new Vector3(startX, 0, rowIndex);
-        Quaternion rotation = Quaternion.Euler(0, direction > 0 ? 90 : -90, 0);
+        for (int i = 0; i < count; i++)
+        {
+            GameObject prefab = fixedObstaclePrefabs[Random.Range(0, fixedObstaclePrefabs.Length)];
 
-        GameObject boat = Instantiate(prefab, spawnPos, rotation, transform);
-        boat.tag = "Obstacle";
-        activeBoats.Add(boat);
+            float xPos;
+            int attempts = 0;
+            do
+            {
+                xPos = Random.Range(-laneWidth / 2f, laneWidth / 2f);
+                attempts++;
+            } while (IsPositionOccupied(xPos, occupiedPositions) && attempts < 20);
+
+            occupiedPositions.Add(xPos);
+
+            Vector3 spawnPos = new Vector3(xPos, 0, rowIndex);
+            GameObject obstacle = Object.Instantiate(prefab, spawnPos, Quaternion.identity, transform);
+            obstacle.tag = "Obstacle";
+            fixedObstacles.Add(obstacle);
+        }
     }
 
     /// <summary>
-    /// 주기적 배 생성
+    /// 위치占用 체크
+    /// </summary>
+    private bool IsPositionOccupied(float newPos, List<float> occupied)
+    {
+        foreach (float pos in occupied)
+        {
+            if (Mathf.Abs(newPos - pos) < minGap)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 이동 장애물 생성 (화면 왼쪽 밖에서Spawn)
+    /// </summary>
+    private void SpawnMovingObstacle()
+    {
+        if (movingObstaclePrefabs == null || movingObstaclePrefabs.Length == 0)
+            return;
+
+        int typeIndex = Random.Range(0, movingObstaclePrefabs.Length);
+        GameObject prefab = movingObstaclePrefabs[typeIndex];
+        float speed = (speeds != null && typeIndex < speeds.Length) ? speeds[typeIndex] : 3f;
+
+        Vector3 spawnPos = new Vector3(leftBoundary - 1f, 0, rowIndex);
+        Quaternion rotation = Quaternion.Euler(0, 0, 0);
+
+        GameObject obstacle = Object.Instantiate(prefab, spawnPos, rotation, transform);
+        obstacle.tag = "Obstacle";
+
+        var mover = obstacle.AddComponent<MovingObstacleMover>();
+        mover.Initialize(speed, rightBoundary + 2f);
+    }
+
+    /// <summary>
+    /// 주기적 이동 장애물 생성 (MovingOnly만)
     /// </summary>
     public void Update()
     {
+        if (currentType != ObstacleType.MovingOnly)
+            return;
+
         timeSinceLastSpawn += Time.deltaTime;
         if (timeSinceLastSpawn >= spawnInterval)
         {
             timeSinceLastSpawn = 0f;
-            SpawnBoat();
+            SpawnMovingObstacle();
         }
+    }
+
+    /// <summary>
+    /// 모든 장애물 제거
+    /// </summary>
+    private void ClearAllObstacles()
+    {
+        foreach (Transform child in transform)
+        {
+            Object.Destroy(child.gameObject);
+        }
+        fixedObstacles.Clear();
     }
 
     /// <summary>
@@ -83,12 +156,7 @@ public class RiverLane : BaseLane
     /// </summary>
     public override void ReleaseToPool()
     {
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
-
-        activeBoats.Clear();
+        ClearAllObstacles();
         gameObject.SetActive(false);
         transform.position = Vector3.one * 1000;
     }

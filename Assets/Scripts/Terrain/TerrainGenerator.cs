@@ -13,7 +13,17 @@ public enum ZoneType
 }
 
 /// <summary>
-/// 레인 생성기 - 4개 테마 기반 레인 생성
+/// 레인 프리팹과 장애물 타입 pairing
+/// </summary>
+[System.Serializable]
+public class LanePrefabType
+{
+    public BaseLane prefab;         // 레인 프리팹
+    public ObstacleType obstacleType; // FixedOnly 또는 MovingOnly
+}
+
+/// <summary>
+/// 레인 생성기 - 4개 테마 기반 레인 생성 (ObstacleType: FixedOnly/MovingOnly)
 /// </summary>
 public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
 {
@@ -24,6 +34,12 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     [Header("구간 설정")]
     [SerializeField] private int lanesPerZone = 10;  // 구간당 레인 수
 
+    [Header("각 테마별 레인 프리팹 + 장애물 타입 배열")]
+    [SerializeField] private LanePrefabType[] forestLaneOptions;   // Forest용
+    [SerializeField] private LanePrefabType[] cityLaneOptions;    // City용
+    [SerializeField] private LanePrefabType[] riverLaneOptions;    // River용
+    [SerializeField] private LanePrefabType[] spaceLaneOptions;   // Space용
+
     // 구간 관리
     private ZoneType currentZone = ZoneType.Forest;
     private int lanesInCurrentZone = 0;
@@ -32,12 +48,6 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     private ObjectPool<BaseLane> lanePool;
     private List<BaseLane> activeLanes = new List<BaseLane>();
     private int currentRow = 0;
-
-    // 레인 프리팹 (4개)
-    private BaseLane grassLanePrefab;    // Forest
-    private BaseLane roadLanePrefab;     // City
-    private BaseLane riverLanePrefab;    // River
-    private BaseLane spaceLanePrefab;    // Space
 
     public int LaneCount => activeLanes.Count;
 
@@ -49,32 +59,6 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         visibleLaneCount = count;
         laneHeight = height;
         lanePool = pool;
-
-        // 프리팹 로드
-        LoadLanePrefabs();
-    }
-
-    /// <summary>
-    /// 레인 프리팹 로드 (4개 테마)
-    /// </summary>
-    private void LoadLanePrefabs()
-    {
-        // Resources 폴더에서 로드
-        grassLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/GrassLane");   // Forest
-        roadLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RoadLane");    // City
-        riverLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RiverLane");  // River
-        spaceLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/SpaceLane");  // Space
-
-        #if UNITY_EDITOR
-        if (grassLanePrefab == null)
-            Debug.LogWarning("[TerrainGenerator] GrassLane 프리팹을 찾을 수 없습니다.");
-        if (roadLanePrefab == null)
-            Debug.LogWarning("[TerrainGenerator] RoadLane 프리팹을 찾을 수 없습니다.");
-        if (riverLanePrefab == null)
-            Debug.LogWarning("[TerrainGenerator] RiverLane 프리팹을 찾을 수 없습니다.");
-        if (spaceLanePrefab == null)
-            Debug.LogWarning("[TerrainGenerator] SpaceLane 프리팹을 찾을 수 없습니다.");
-        #endif
     }
 
     /// <summary>
@@ -92,14 +76,98 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     public void GenerateLaneAtRow(int row)
     {
         LaneType type = DecideLaneType();
-        BaseLane lane = RentLane(type);
-        lane.Initialize(row);
+
+        // 바닥 프리팹 + 장애물 타입 랜덤 선택
+        LanePrefabType selected = GetRandomPrefabTypeForZone(currentZone);
+        ObstacleType obstacleType = selected != null ? selected.obstacleType : ObstacleType.FixedOnly;
+        BaseLane lanePrefab = selected != null ? selected.prefab : null;
+
+        BaseLane lane;
+
+        if (lanePrefab != null)
+        {
+            lane = lanePool.Rent();
+        }
+        else
+        {
+            // 폴백: 동적 생성
+            lane = CreateDynamicLane(type);
+        }
+
+        // 장애물 타입 파라미터 전달
+        var method = lane.GetType().GetMethod("Initialize", new[] { typeof(int), typeof(ObstacleType) });
+        if (method != null)
+        {
+            method.Invoke(lane, new object[] { row, obstacleType });
+        }
+        else
+        {
+            lane.Initialize(row);
+        }
+
         activeLanes.Add(lane);
 
         // 구간 내 레인 카운트 증가
         IncrementLaneCount();
 
         currentRow = Mathf.Max(currentRow, row);
+    }
+
+    /// <summary>
+    /// 구간에 맞는 랜덤 바닥+타입 반환 (null 자동 필터링)
+    /// </summary>
+    private LanePrefabType GetRandomPrefabTypeForZone(ZoneType zone)
+    {
+        LanePrefabType[] options = GetOptionsForZone(zone);
+
+        // null 및 무효 프리팹 필터링
+        List<LanePrefabType> validOptions = new List<LanePrefabType>();
+        foreach (var option in options)
+        {
+            if (option != null && option.prefab != null)
+                validOptions.Add(option);
+        }
+
+        if (validOptions.Count == 0)
+        {
+            Debug.LogWarning($"[TerrainGenerator] {zone} 테마의 유효한 레인이 없습니다.");
+            return null;
+        }
+
+        return validOptions[Random.Range(0, validOptions.Count)];
+    }
+
+    /// <summary>
+    /// Zone별 LanePrefabType 배열 반환
+    /// </summary>
+    private LanePrefabType[] GetOptionsForZone(ZoneType zone)
+    {
+        switch (zone)
+        {
+            case ZoneType.Forest: return forestLaneOptions;
+            case ZoneType.City:   return cityLaneOptions;
+            case ZoneType.River:  return riverLaneOptions;
+            case ZoneType.Space:  return spaceLaneOptions;
+            default:             return forestLaneOptions;
+        }
+    }
+
+    /// <summary>
+    /// 동적 레인 생성 (폴백)
+    /// </summary>
+    private BaseLane CreateDynamicLane(LaneType type)
+    {
+        var laneObj = new GameObject(type.ToString() + "Lane");
+        laneObj.transform.parent = transform;
+
+        switch (type)
+        {
+            case LaneType.Grass:  return laneObj.AddComponent<GrassLane>();
+            case LaneType.Road:   return laneObj.AddComponent<RoadLane>();
+            case LaneType.River:  return laneObj.AddComponent<RiverLane>();
+            case LaneType.Space:  return laneObj.AddComponent<SpaceLane>();
+            default:             return laneObj.AddComponent<GrassLane>();
+        }
     }
 
     /// <summary>
@@ -201,51 +269,5 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     private void IncrementLaneCount()
     {
         lanesInCurrentZone++;
-    }
-
-    /// <summary>
-    /// 풀에서 레인租借
-    /// </summary>
-    private BaseLane RentLane(LaneType type)
-    {
-        BaseLane prefab = GetPrefabForType(type);
-
-        // 프리팹이 있으면 풀에서租借
-        if (prefab != null)
-        {
-            return lanePool.Rent();
-        }
-
-        // 프리팹 없음: 구체적 타입 GameObject 생성 (폴백)
-        #if UNITY_EDITOR
-        Debug.LogWarning($"[TerrainGenerator] {type} 프리팹 없음 - 동적 생성");
-        #endif
-
-        var laneObj = new GameObject(type.ToString() + "Lane");
-        laneObj.transform.parent = transform;
-
-        switch (type)
-        {
-            case LaneType.Grass:  return laneObj.AddComponent<GrassLane>();
-            case LaneType.Road:    return laneObj.AddComponent<RoadLane>();
-            case LaneType.River:   return laneObj.AddComponent<RiverLane>();
-            case LaneType.Space:   return laneObj.AddComponent<SpaceLane>();
-            default:              return laneObj.AddComponent<GrassLane>();
-        }
-    }
-
-    /// <summary>
-    /// 타입별 프리팹 반환
-    /// </summary>
-    private BaseLane GetPrefabForType(LaneType type)
-    {
-        switch (type)
-        {
-            case LaneType.Grass:  return grassLanePrefab;
-            case LaneType.Road:   return roadLanePrefab;
-            case LaneType.River:  return riverLanePrefab;
-            case LaneType.Space:  return spaceLanePrefab;
-            default:              return grassLanePrefab;
-        }
     }
 }

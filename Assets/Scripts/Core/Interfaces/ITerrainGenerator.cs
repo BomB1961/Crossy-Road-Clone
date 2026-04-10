@@ -3,10 +3,10 @@
 /// </summary>
 public enum LaneType
 {
-    Grass,      // 숲 (안전) - 동물 이동 장애물
-    Road,       // 도시 (차량) - 가로등/방호벽 고정 장애물
-    River,      // 강 (배) - 고정 장애물 없음
-    Space       // 우주 (우주선) - 암석/안테나 고정 장애물
+    Grass,   // 숲 - GrassLane
+    Road,    // 도시 - RoadLane
+    River,   // 강 - RiverLane
+    Space    // 우주 - SpaceLane
 }
 
 /// <summary>

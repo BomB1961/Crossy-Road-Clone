@@ -2,73 +2,89 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 숲 레인 - 잔디 + 동물 이동 장애물 + 나무/바위 고정 장애물
+/// 숲 레인 - 동물 이동 장애물 (좌→우) + 나무/바위 고정 장애물
 /// </summary>
 public class ForestLane : BaseLane
 {
-    [Header("숲 레인 설정")]
-    [SerializeField] private int laneWidth = 7;        // 레인 폭
+    [Header("레이너 설정")]
+    [SerializeField] private int laneWidth = 7;
+    [SerializeField] private float leftBoundary = -8f;
+    [SerializeField] private float rightBoundary = 8f;
 
-    [Header("고정 장애물 설정")]
-    [SerializeField] private int minStaticObstacles = 1;   // 최소 고정 장애물 개수
-    [SerializeField] private int maxStaticObstacles = 4;   // 최대 고정 장애물 개수
-    [SerializeField] private float minObstacleGap = 1.2f;  // 고정 장애물 최소 간격
+    [Header("고정 장애물 (FixedOnly)")]
+    [SerializeField] private GameObject[] fixedObstaclePrefabs;  // 나무, 바위
+    [SerializeField] private int minFixedCount = 2;
+    [SerializeField] private int maxFixedCount = 4;
+    [SerializeField] private float minGap = 1.5f;
 
-    [Header("동물 Prefabs")]
-    [SerializeField] private GameObject[] animalPrefabs;
+    [Header("이동 장애물 (MovingOnly)")]
+    [SerializeField] private GameObject[] movingObstaclePrefabs;  // 동물 종류별
+    [SerializeField] private float[] speeds;                       // 각 종류의 속도
+    [SerializeField] private float spawnInterval = 3f;
 
-    [Header("고정 장애물 Prefabs (나무, 바위)")]
-    [SerializeField] private GameObject[] staticObstaclePrefabs;
+    // 장애물 타입
+    private ObstacleType currentType = ObstacleType.FixedOnly;
+
+    // 고정 장애물 관리
+    private List<GameObject> fixedObstacles = new List<GameObject>();
 
     // 이동 장애물 관리
     private float timeSinceLastSpawn = 0f;
-    private float spawnInterval = 3f;
-    private int direction = 1;
-    private List<GameObject> activeAnimals = new List<GameObject>();
 
     public override void Initialize(int row)
     {
-        base.Initialize(row);
-
-        // 방향 랜덤 결정
-        direction = Random.Range(0, 2) == 0 ? 1 : -1;
-
-        // 고정 장애물 생성 (나무, 바위)
-        GenerateStaticObstacles();
-
-        // 초기 동물 생성
-        GenerateObstacles();
+        Initialize(row, ObstacleType.FixedOnly);
     }
 
     /// <summary>
-    /// 고정 장애물 생성 (나무, 바위)
+    /// ObstacleType 기반 초기화
     /// </summary>
-    private void GenerateStaticObstacles()
+    public void Initialize(int row, ObstacleType type)
     {
-        if (staticObstaclePrefabs == null || staticObstaclePrefabs.Length == 0)
+        base.Initialize(row);
+        currentType = type;
+
+        ClearAllObstacles();
+
+        if (type == ObstacleType.FixedOnly)
+        {
+            GenerateFixedObstacles();
+        }
+        else // MovingOnly
+        {
+            timeSinceLastSpawn = 0f;
+        }
+    }
+
+    /// <summary>
+    /// 고정 장애물 생성 (균형 잡힌 랜덤 배치)
+    /// </summary>
+    private void GenerateFixedObstacles()
+    {
+        if (fixedObstaclePrefabs == null || fixedObstaclePrefabs.Length == 0)
             return;
 
-        int count = Random.Range(minStaticObstacles, maxStaticObstacles + 1);
+        int count = Random.Range(minFixedCount, maxFixedCount + 1);
         List<float> occupiedPositions = new List<float>();
 
         for (int i = 0; i < count; i++)
         {
-            GameObject prefab = staticObstaclePrefabs[Random.Range(0, staticObstaclePrefabs.Length)];
+            GameObject prefab = fixedObstaclePrefabs[Random.Range(0, fixedObstaclePrefabs.Length)];
 
-            // 랜덤 위치 생성
             float xPos;
             int attempts = 0;
             do
             {
                 xPos = Random.Range(-laneWidth / 2f, laneWidth / 2f);
                 attempts++;
-            } while (IsPositionOccupied(xPos, occupiedPositions) && attempts < 10);
+            } while (IsPositionOccupied(xPos, occupiedPositions) && attempts < 20);
 
             occupiedPositions.Add(xPos);
 
             Vector3 spawnPos = new Vector3(xPos, 0, rowIndex);
-            GameObject obstacle = Instantiate(prefab, spawnPos, Quaternion.identity, transform);
+            GameObject obstacle = Object.Instantiate(prefab, spawnPos, Quaternion.identity, transform);
             obstacle.tag = "Obstacle";
+            fixedObstacles.Add(obstacle);
         }
     }
 
@@ -79,57 +95,60 @@ public class ForestLane : BaseLane
     {
         foreach (float pos in occupied)
         {
-            if (Mathf.Abs(newPos - pos) < minObstacleGap)
+            if (Mathf.Abs(newPos - pos) < minGap)
                 return true;
         }
         return false;
     }
 
     /// <summary>
-    /// 초기 동물 생성
+    /// 이동 장애물 생성 (화면 왼쪽 밖에서Spawn)
     /// </summary>
-    public override void GenerateObstacles()
+    private void SpawnMovingObstacle()
     {
-        if (animalPrefabs == null || animalPrefabs.Length == 0)
+        if (movingObstaclePrefabs == null || movingObstaclePrefabs.Length == 0)
             return;
 
-        int initialCount = Random.Range(1, 2);
-        for (int i = 0; i < initialCount; i++)
-        {
-            SpawnAnimal();
-        }
+        int typeIndex = Random.Range(0, movingObstaclePrefabs.Length);
+        GameObject prefab = movingObstaclePrefabs[typeIndex];
+        float speed = (speeds != null && typeIndex < speeds.Length) ? speeds[typeIndex] : 3f;
+
+        Vector3 spawnPos = new Vector3(leftBoundary - 1f, 0, rowIndex);
+        Quaternion rotation = Quaternion.Euler(0, 0, 0);
+
+        GameObject obstacle = Object.Instantiate(prefab, spawnPos, rotation, transform);
+        obstacle.tag = "Obstacle";
+
+        var mover = obstacle.AddComponent<MovingObstacleMover>();
+        mover.Initialize(speed, rightBoundary + 2f);
     }
 
     /// <summary>
-    /// 동물 생성
-    /// </summary>
-    private void SpawnAnimal()
-    {
-        if (animalPrefabs == null || animalPrefabs.Length == 0)
-            return;
-
-        GameObject prefab = animalPrefabs[Random.Range(0, animalPrefabs.Length)];
-        float startX = direction > 0 ? -laneWidth / 2f - 1f : laneWidth / 2f + 1f;
-
-        Vector3 spawnPos = new Vector3(startX, 0, rowIndex);
-        Quaternion rotation = Quaternion.Euler(0, direction > 0 ? 90 : -90, 0);
-
-        GameObject animal = Instantiate(prefab, spawnPos, rotation, transform);
-        animal.tag = "Obstacle";
-        activeAnimals.Add(animal);
-    }
-
-    /// <summary>
-    /// 주기적 동물 생성
+    /// 주기적 이동 장애물 생성 (MovingOnly만)
     /// </summary>
     public void Update()
     {
+        if (currentType != ObstacleType.MovingOnly)
+            return;
+
         timeSinceLastSpawn += Time.deltaTime;
         if (timeSinceLastSpawn >= spawnInterval)
         {
             timeSinceLastSpawn = 0f;
-            SpawnAnimal();
+            SpawnMovingObstacle();
         }
+    }
+
+    /// <summary>
+    /// 모든 장애물 제거
+    /// </summary>
+    private void ClearAllObstacles()
+    {
+        foreach (Transform child in transform)
+        {
+            Object.Destroy(child.gameObject);
+        }
+        fixedObstacles.Clear();
     }
 
     /// <summary>
@@ -137,12 +156,7 @@ public class ForestLane : BaseLane
     /// </summary>
     public override void ReleaseToPool()
     {
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
-
-        activeAnimals.Clear();
+        ClearAllObstacles();
         gameObject.SetActive(false);
         transform.position = Vector3.one * 1000;
     }
