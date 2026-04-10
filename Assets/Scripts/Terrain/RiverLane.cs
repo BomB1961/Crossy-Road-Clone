@@ -57,6 +57,14 @@ public class RiverLane : BaseLane
     }
 
     /// <summary>
+    /// 레인 타입별 장애물 생성 (BaseLane 추상 메서드 구현)
+    /// </summary>
+    public override void GenerateObstacles()
+    {
+        // ObstacleType 기반 초기화에서 처리됨
+    }
+
+    /// <summary>
     /// 고정 장애물 생성 (균형 잡힌 랜덤 배치)
     /// </summary>
     private void GenerateFixedObstacles()

@@ -60,7 +60,10 @@ public class PlayerInputHandler : MonoBehaviour
         moveAction?.Enable();
         lookAction?.Enable();
 
-        moveAction.started += OnMoveStarted;
+        if (moveAction != null)
+        {
+            moveAction.started += OnMoveStarted;
+        }
     }
 
     private void OnDisable()

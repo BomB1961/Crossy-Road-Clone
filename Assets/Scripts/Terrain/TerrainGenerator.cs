@@ -120,6 +120,13 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     {
         LanePrefabType[] options = GetOptionsForZone(zone);
 
+        // options 배열이 null이면 빈 배열 반환
+        if (options == null || options.Length == 0)
+        {
+            Debug.LogWarning($"[TerrainGenerator] {zone} 테마의 레인 옵션이 설정되지 않았습니다.");
+            return null;
+        }
+
         // null 및 무효 프리팹 필터링
         List<LanePrefabType> validOptions = new List<LanePrefabType>();
         foreach (var option in options)

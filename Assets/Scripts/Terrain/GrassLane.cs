@@ -1,70 +1,167 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
-/// 풀밭 레인 - 안전区域, 장애물 없음
+/// 숲 레인 - 동물 이동 장애물 (좌→우) + 나무/바위 고정 장애물
 /// </summary>
 public class GrassLane : BaseLane
 {
-    [Header("풀밭 설정")]
-    [SerializeField] private GameObject[] decorationPrefabs; // 나무, 바위, 꽃 등
-    [SerializeField] private int decorationCount = 3;
+    [Header("레이너 설정")]
+    [SerializeField] private int laneWidth = 7;
+    [SerializeField] private float leftBoundary = -8f;
+    [SerializeField] private float rightBoundary = 8f;
+
+    [Header("고정 장애물 (FixedOnly)")]
+    [SerializeField] private GameObject[] fixedObstaclePrefabs;  // 나무, 바위
+    [SerializeField] private int minFixedCount = 2;
+    [SerializeField] private int maxFixedCount = 4;
+    [SerializeField] private float minGap = 1.5f;
+
+    [Header("이동 장애물 (MovingOnly)")]
+    [SerializeField] private GameObject[] movingObstaclePrefabs;  // 동물 종류별
+    [SerializeField] private float[] speeds;                       // 각 종류의 속도
+    [SerializeField] private float spawnInterval = 3f;
+
+    // 장애물 타입
+    private ObstacleType currentType = ObstacleType.FixedOnly;
+
+    // 고정 장애물 관리
+    private List<GameObject> fixedObstacles = new List<GameObject>();
+
+    // 이동 장애물 관리 (메모리 최적화: Spawn/Despawn)
+    private float timeSinceLastSpawn = 0f;
 
     public override void Initialize(int row)
     {
-        base.Initialize(row);
-        GenerateObstacles();
+        Initialize(row, ObstacleType.FixedOnly);
     }
 
     /// <summary>
-    /// 장식 오브젝트 생성 (나무, 바위, 꽃 등)
+    /// ObstacleType 기반 초기화
+    /// </summary>
+    public void Initialize(int row, ObstacleType type)
+    {
+        base.Initialize(row);
+        currentType = type;
+
+        // 기존 장애물 제거
+        ClearAllObstacles();
+
+        if (type == ObstacleType.FixedOnly)
+        {
+            GenerateFixedObstacles();
+        }
+        else // MovingOnly
+        {
+            timeSinceLastSpawn = 0f;
+        }
+    }
+
+    /// <summary>
+    /// 레인 타입별 장애물 생성 (BaseLane 추상 메서드 구현 - ObstacleType 기반)
     /// </summary>
     public override void GenerateObstacles()
     {
-        // Decorations 폴더에서 에셋 로드 (자동)
-        if (decorationPrefabs == null || decorationPrefabs.Length == 0)
-        {
-            LoadDecorationsFromResources();
-        }
+        // ObstacleType 기반 초기화에서 처리되므로 여기서는 빈 구현
+    }
 
-        if (decorationPrefabs == null || decorationPrefabs.Length == 0)
+    /// <summary>
+    /// 고정 장애물 생성 (균형 잡힌 랜덤 배치)
+    /// </summary>
+    private void GenerateFixedObstacles()
+    {
+        if (fixedObstaclePrefabs == null || fixedObstaclePrefabs.Length == 0)
             return;
 
-        for (int i = 0; i < decorationCount; i++)
-        {
-            int randomCol = Random.Range(-3, 4);
-            Vector3 pos = new Vector3(randomCol, 0, rowIndex);
+        int count = Random.Range(minFixedCount, maxFixedCount + 1);
+        List<float> occupiedPositions = new List<float>();
 
-            GameObject prefab = decorationPrefabs[Random.Range(0, decorationPrefabs.Length)];
-            if (prefab != null)
+        for (int i = 0; i < count; i++)
+        {
+            GameObject prefab = fixedObstaclePrefabs[Random.Range(0, fixedObstaclePrefabs.Length)];
+
+            // 최소 간격 유지면서 랜덤 위치 생성
+            float xPos;
+            int attempts = 0;
+            do
             {
-                Instantiate(prefab, pos, Quaternion.identity, transform);
-            }
+                xPos = Random.Range(-laneWidth / 2f, laneWidth / 2f);
+                attempts++;
+            } while (IsPositionOccupied(xPos, occupiedPositions) && attempts < 20);
+
+            occupiedPositions.Add(xPos);
+
+            Vector3 spawnPos = new Vector3(xPos, 0, rowIndex);
+            GameObject obstacle = Object.Instantiate(prefab, spawnPos, Quaternion.identity, transform);
+            obstacle.tag = "Obstacle";
+            fixedObstacles.Add(obstacle);
         }
     }
 
     /// <summary>
-    /// Resources에서 장식Prefab 자동 로드
+    /// 위치占用 체크 (최소 간격)
     /// </summary>
-    private void LoadDecorationsFromResources()
+    private bool IsPositionOccupied(float newPos, List<float> occupied)
     {
-        // Assets/Decorations/의 FBX 파일들을 Resources.Load로 로드
-        Object[] trees = Resources.LoadAll("Decorations/tree", typeof(GameObject));
-        Object[] rocks = Resources.LoadAll("Decorations/rock", typeof(GameObject));
-        Object[] bushes = Resources.LoadAll("Decorations/bush", typeof(GameObject));
-
-        System.Collections.Generic.List<GameObject> list = new System.Collections.Generic.List<GameObject>();
-
-        foreach (Object obj in trees)
-            if (obj is GameObject) list.Add((GameObject)obj);
-        foreach (Object obj in rocks)
-            if (obj is GameObject) list.Add((GameObject)obj);
-        foreach (Object obj in bushes)
-            if (obj is GameObject) list.Add((GameObject)obj);
-
-        if (list.Count > 0)
+        foreach (float pos in occupied)
         {
-            decorationPrefabs = list.ToArray();
+            if (Mathf.Abs(newPos - pos) < minGap)
+                return true;
         }
+        return false;
+    }
+
+    /// <summary>
+    /// 이동 장애물 생성 (화면 왼쪽 밖에서Spawn)
+    /// </summary>
+    private void SpawnMovingObstacle()
+    {
+        if (movingObstaclePrefabs == null || movingObstaclePrefabs.Length == 0)
+            return;
+
+        // 랜덤 종류 선택 (속도도 해당 종류의 것으로 고정)
+        int typeIndex = Random.Range(0, movingObstaclePrefabs.Length);
+        GameObject prefab = movingObstaclePrefabs[typeIndex];
+        float speed = (speeds != null && typeIndex < speeds.Length) ? speeds[typeIndex] : 3f;
+
+        // 화면 왼쪽 밖에서 Spawn
+        Vector3 spawnPos = new Vector3(leftBoundary - 1f, 0, rowIndex);
+        Quaternion rotation = Quaternion.Euler(0, 0, 0); // 좌→우이므로 회전 없음
+
+        GameObject obstacle = Object.Instantiate(prefab, spawnPos, rotation, transform);
+        obstacle.tag = "Obstacle";
+
+        // 이동 컴포넌트 설정
+        var mover = obstacle.AddComponent<MovingObstacleMover>();
+        mover.Initialize(speed, rightBoundary + 2f); // 제거 경계
+    }
+
+    /// <summary>
+    /// 주기적 이동 장애물 생성 (MovingOnly만)
+    /// </summary>
+    public void Update()
+    {
+        if (currentType != ObstacleType.MovingOnly)
+            return;
+
+        timeSinceLastSpawn += Time.deltaTime;
+        if (timeSinceLastSpawn >= spawnInterval)
+        {
+            timeSinceLastSpawn = 0f;
+            SpawnMovingObstacle();
+        }
+    }
+
+    /// <summary>
+    /// 모든 장애물 제거
+    /// </summary>
+    private void ClearAllObstacles()
+    {
+        foreach (Transform child in transform)
+        {
+            Object.Destroy(child.gameObject);
+        }
+        fixedObstacles.Clear();
     }
 
     /// <summary>
@@ -72,13 +169,8 @@ public class GrassLane : BaseLane
     /// </summary>
     public override void ReleaseToPool()
     {
-        // 자식 장식 모두 제거
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
-
+        ClearAllObstacles();
         gameObject.SetActive(false);
-        transform.position = Vector3.one * 1000; // 숨김 위치
+        transform.position = Vector3.one * 1000;
     }
 }
