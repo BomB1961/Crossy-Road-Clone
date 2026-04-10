@@ -18,7 +18,6 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     [Header("레인 설정")]
     [SerializeField] private int visibleLaneCount = 9;
     [SerializeField] private float laneHeight = 1f;
-    [SerializeField] private float generateAheadDistance = 5f;
 
     [Header("구간 설정")]
     [SerializeField] private int lanesPerZone = 9;  // 구간당 레인 수

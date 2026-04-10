@@ -90,7 +90,7 @@ public class Bootstrap : MonoBehaviour
 
         // 플레이어 컨트롤러 설정
         // 먼저 scene에서 기존 PlayerController 찾기
-        var existingPlayer = FindObjectOfType<PlayerController>();
+        var existingPlayer = FindAnyObjectByType<PlayerController>();
         if (existingPlayer != null)
         {
             // 에디터 작업 중: 기존 Player 사용

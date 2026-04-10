@@ -4,7 +4,7 @@ using UnityEngine;
 /// 장애물 충돌 감지 - 트리거 기반 플레이어死亡 감지
 /// </summary>
 /// <remarks>
-/// 차량, 기차, 통나무 등 장애물 오브젝트에 attachして 사용
+/// 차량 등 장애물 오브젝트에 attachして 사용
 /// Collider의 Is Trigger 옵션必須
 /// </remarks>
 public class ObstacleCollision : MonoBehaviour

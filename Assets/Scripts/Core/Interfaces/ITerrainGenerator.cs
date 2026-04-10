@@ -4,9 +4,7 @@
 public enum LaneType
 {
     Grass,      // 풀밭 (안전)
-    Road,       // 도로 (차량)
-    River,      // 강 (통나무)
-    Railroad    // 레일 (기차)
+    Road        // 도로 (차량)
 }
 
 /// <summary>

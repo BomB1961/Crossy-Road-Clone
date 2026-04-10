@@ -7,7 +7,6 @@ public class RoadLane : BaseLane
 {
     [Header("도로 설정")]
     [SerializeField] private int laneWidth = 7;        // 차선 수 (홀수)
-    [SerializeField] private float vehicleSpeed = 3f;   // 차량 속도
     [SerializeField] private float spawnInterval = 2f;  // 생성 간격
 
     [Header("차량Prefabs")]

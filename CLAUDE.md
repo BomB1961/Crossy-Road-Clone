@@ -89,7 +89,7 @@ To build the Crossy Road clone, these core systems are needed:
 
 ## 객체지향 설계
 - 캡슐화: 이동 수치 및 상태 변수는 private으로 보호한다.
-- 다형성: 장애물(차, 통나무)은 BaseObstacle을 상속받아 구현한다.
+- 다형성: 장애물(차량)은 BaseObstacle을 상속받아 구현한다.
 - 단일 책임: 입력과 이동 로직을 별도 클래스로 분리한다.
 
 

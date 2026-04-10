@@ -5,7 +5,7 @@ using UnityEngine;
 /// </summary>
 public interface IPlayerController
 {
-    /// <summary>현재 위치 (_ROW)</summary>
+    /// <summary>현재 위치 (ROW)</summary>
     int CurrentRow { get; }
 
     /// <summary>현재 위치 (COL)</summary>
@@ -23,11 +23,6 @@ public interface IPlayerController
     /// 지정한 열로 이동 (좌/우)
     /// </summary>
     void MoveCol(int delta);
-
-    /// <summary>
-    /// 점프 애니메이션 트리거
-    /// </summary>
-    void Jump();
 
     /// <summary>
     /// 플레이어 위치 초기화

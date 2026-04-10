@@ -68,10 +68,8 @@ if (Physics.Raycast(targetPos + Vector3.up * 0.5f, Vector3.down, out hit, 1f, ob
 **가중치 기반 랜덤 타입 결정**:
 | 타입 | 가중치 | 비고 |
 |------|--------|------|
-| Grass | 40 | 안전区域 |
-| Road | 30 | 차량 장애물 |
-| River | 15 | 통나무 필요 |
-| Railroad | 15 | 기차 통과 |
+| Grass | 60 | 안전区域 |
+| Road | 40 | 차량 장애물 |
 
 ---
 
@@ -106,7 +104,7 @@ if (Physics.Raycast(targetPos + Vector3.up * 0.5f, Vector3.down, out hit, 1f, ob
 
 ## 다음 단계: 3단계
 
-1. 장애물 시스템 (차량, 기차, 통나무)
+1. 장애물 시스템 (차량)
 2. 카메라追徏控制系统
 3. 독수리 시스템 (데드존)
 4. UI 연동 (HUD, GameOver)

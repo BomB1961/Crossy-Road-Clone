@@ -34,7 +34,7 @@ Assets/Scripts/
 │   └── BaseClasses/  # BaseLane, BaseObstacle 등
 ├── Player/            # 플레이어 이동, 입력 처리
 ├── Terrain/          # 레인 생성, 관리
-├── Obstacles/        # 차량, 기차, 통나무 등
+├── Obstacles/        # 차량
 ├── Pool/             # 오브젝트 풀링 관리
 ├── UI/               # HUD, GameOver
 └── Game/             # 게임 매니저, 점수
@@ -47,7 +47,7 @@ Assets/Scripts/
 | 1 | Bootstrap + 인터페이스 | DI 설정, 인터페이스 정의 |
 | 2 | 플레이어 조종 | 이동/점프/충돌 감지 |
 | 3 | 레인 생성 | 풀밭/도로 레인 생성 및 관리 |
-| 4 | 장애물 시스템 | 차량, 통나무, 기차 |
+| 4 | 장애물 시스템 | 차량 |
 | 5 | 게임 로직 | 점수, 독수리, 게임 오버 |
 | 6 | UI 연동 | HUD, 재시작 |
 
@@ -56,13 +56,11 @@ Assets/Scripts/
 ### 레인 시스템
 - 화면에 9개 레인 표시 (고정)
 - 플레이어 전진 시 새로운 레인 생성,古いレーン削除
-- 레인 타입: Grass(풀밭), Road(도로), River(강), Railroad(레일)
+- 레인 타입: Grass(풀밭), Road(도로)
 
 ### 장애물 이동
 - 각 레인 타입별 장애물 풀 관리
 -Road: 차량 좌/우 이동
--River: 통나무 좌/우 이동
--Railroad: 기차定期通過
 
 ### 독수리 시스템
 - 플레이어 5초 이상 정지 시 Eagle 등장
