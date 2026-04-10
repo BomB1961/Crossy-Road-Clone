@@ -2,16 +2,18 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 테마 구간 열거형
+/// 테마 구간 열거형 (4개 테마)
 /// </summary>
 public enum ZoneType
 {
-    Forest,  // 잔디 (GrassLane)
-    City     // 도로 (RoadLane)
+    Forest,  // 숲 - GrassLane
+    City,    // 도시 - RoadLane
+    River,   // 강 - RiverLane
+    Space    // 우주 - SpaceLane
 }
 
 /// <summary>
-/// 레인 생성기 - 구간별 테마 기반 레인 생성
+/// 레인 생성기 - 4개 테마 기반 레인 생성
 /// </summary>
 public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
 {
@@ -20,7 +22,7 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     [SerializeField] private float laneHeight = 1f;
 
     [Header("구간 설정")]
-    [SerializeField] private int lanesPerZone = 9;  // 구간당 레인 수
+    [SerializeField] private int lanesPerZone = 10;  // 구간당 레인 수
 
     // 구간 관리
     private ZoneType currentZone = ZoneType.Forest;
@@ -31,9 +33,11 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     private List<BaseLane> activeLanes = new List<BaseLane>();
     private int currentRow = 0;
 
-    // 레인 프리팹
-    private BaseLane grassLanePrefab;
-    private BaseLane roadLanePrefab;
+    // 레인 프리팹 (4개)
+    private BaseLane grassLanePrefab;    // Forest
+    private BaseLane roadLanePrefab;     // City
+    private BaseLane riverLanePrefab;    // River
+    private BaseLane spaceLanePrefab;    // Space
 
     public int LaneCount => activeLanes.Count;
 
@@ -46,24 +50,30 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         laneHeight = height;
         lanePool = pool;
 
-        // 프리팹 로드 ( Hierarchy에서 찾기 - 추후Resources.Load로 변경 가능)
+        // 프리팹 로드
         LoadLanePrefabs();
     }
 
     /// <summary>
-    /// 레인 프리팹 로드
+    /// 레인 프리팹 로드 (4개 테마)
     /// </summary>
     private void LoadLanePrefabs()
     {
-        //Resources 폴더에서 로드
-        grassLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/GrassLane");
-        roadLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RoadLane");
+        // Resources 폴더에서 로드
+        grassLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/GrassLane");   // Forest
+        roadLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RoadLane");    // City
+        riverLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/RiverLane");  // River
+        spaceLanePrefab = Resources.Load<BaseLane>("Prefabs/Lanes/SpaceLane");  // Space
 
         #if UNITY_EDITOR
         if (grassLanePrefab == null)
-            Debug.LogWarning("[TerrainGenerator] GrassLane 프리팹을 찾을 수 없습니다. Resources/Prefabs/Lanes/에 배치하세요.");
+            Debug.LogWarning("[TerrainGenerator] GrassLane 프리팹을 찾을 수 없습니다.");
         if (roadLanePrefab == null)
-            Debug.LogWarning("[TerrainGenerator] RoadLane 프리팹을 찾을 수 없습니다. Resources/Prefabs/Lanes/에 배치하세요.");
+            Debug.LogWarning("[TerrainGenerator] RoadLane 프리팹을 찾을 수 없습니다.");
+        if (riverLanePrefab == null)
+            Debug.LogWarning("[TerrainGenerator] RiverLane 프리팹을 찾을 수 없습니다.");
+        if (spaceLanePrefab == null)
+            Debug.LogWarning("[TerrainGenerator] SpaceLane 프리팹을 찾을 수 없습니다.");
         #endif
     }
 
@@ -130,8 +140,7 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     }
 
     /// <summary>
-    /// 구간 기반 레인 타입 결정
-    /// Forest → GrassLane, City → RoadLane
+    /// 구간 기반 레인 타입 결정 (4개 테마 순환)
     /// </summary>
     private LaneType DecideLaneType()
     {
@@ -142,15 +151,45 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         }
 
         // 현재 구간에 맞는 레인 타입 반환
-        return currentZone == ZoneType.Forest ? LaneType.Grass : LaneType.Road;
+        return ZoneToLaneType(currentZone);
     }
 
     /// <summary>
-    /// 구간 전환 (Forest ↔ City)
+    /// ZoneType → LaneType 변환
+    /// </summary>
+    private LaneType ZoneToLaneType(ZoneType zone)
+    {
+        switch (zone)
+        {
+            case ZoneType.Forest: return LaneType.Grass;
+            case ZoneType.City:   return LaneType.Road;
+            case ZoneType.River:  return LaneType.River;
+            case ZoneType.Space:  return LaneType.Space;
+            default:              return LaneType.Grass;
+        }
+    }
+
+    /// <summary>
+    /// 구간 전환 (4개 테마 순환)
     /// </summary>
     private void SwitchZone()
     {
-        currentZone = currentZone == ZoneType.Forest ? ZoneType.City : ZoneType.Forest;
+        // Forest → City → River → Space → Forest ...
+        switch (currentZone)
+        {
+            case ZoneType.Forest:
+                currentZone = ZoneType.City;
+                break;
+            case ZoneType.City:
+                currentZone = ZoneType.River;
+                break;
+            case ZoneType.River:
+                currentZone = ZoneType.Space;
+                break;
+            case ZoneType.Space:
+                currentZone = ZoneType.Forest;
+                break;
+        }
         lanesInCurrentZone = 0;
 
         Debug.Log($"[TerrainGenerator] 구간 전환: {currentZone}");
@@ -171,7 +210,7 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     {
         BaseLane prefab = GetPrefabForType(type);
 
-        // 프리팹이 있으면 풀에서租借, 없으면 동적 생성
+        // 프리팹이 있으면 풀에서租借
         if (prefab != null)
         {
             return lanePool.Rent();
@@ -187,12 +226,11 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
 
         switch (type)
         {
-            case LaneType.Grass:
-                return laneObj.AddComponent<GrassLane>();
-            case LaneType.Road:
-                return laneObj.AddComponent<RoadLane>();
-            default:
-                return laneObj.AddComponent<GrassLane>();
+            case LaneType.Grass:  return laneObj.AddComponent<GrassLane>();
+            case LaneType.Road:    return laneObj.AddComponent<RoadLane>();
+            case LaneType.River:   return laneObj.AddComponent<RiverLane>();
+            case LaneType.Space:   return laneObj.AddComponent<SpaceLane>();
+            default:              return laneObj.AddComponent<GrassLane>();
         }
     }
 
@@ -203,9 +241,11 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     {
         switch (type)
         {
-            case LaneType.Grass: return grassLanePrefab;
-            case LaneType.Road: return roadLanePrefab;
-            default: return grassLanePrefab;
+            case LaneType.Grass:  return grassLanePrefab;
+            case LaneType.Road:   return roadLanePrefab;
+            case LaneType.River:  return riverLanePrefab;
+            case LaneType.Space:  return spaceLanePrefab;
+            default:              return grassLanePrefab;
         }
     }
 }
