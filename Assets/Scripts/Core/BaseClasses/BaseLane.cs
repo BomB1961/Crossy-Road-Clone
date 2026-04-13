@@ -29,9 +29,13 @@ public abstract class BaseLane : MonoBehaviour
     public abstract void GenerateObstacles();
 
     /// <summary>
-    /// 풀로 반환
+    /// 풀로 반환 (풀 미사용 시 직접 파괴)
     /// </summary>
-    public abstract void ReleaseToPool();
+    public virtual void ReleaseToPool()
+    {
+        // 풀 미사용 시 직접 파괴
+        Destroy(gameObject);
+    }
 
     /// <summary>
     /// 장애물 활성화/비활성화 (기본 구현)

@@ -44,8 +44,7 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     private ZoneType currentZone = ZoneType.Forest;
     private int lanesInCurrentZone = 0;
 
-    // 레인 관리
-    private ObjectPool<BaseLane> lanePool;
+    // 레인 관리 (pool 미사용, 직접 생성)
     private List<BaseLane> activeLanes = new List<BaseLane>();
     private int currentRow = 0;
 
@@ -54,11 +53,10 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     /// <summary>
     /// 초기화
     /// </summary>
-    public void Initialize(int count, float height, ObjectPool<BaseLane> pool)
+    public void Initialize(int count, float height)
     {
         visibleLaneCount = count;
         laneHeight = height;
-        lanePool = pool;
     }
 
     /// <summary>
@@ -80,19 +78,24 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
         // 바닥 프리팹 + 장애물 타입 랜덤 선택
         LanePrefabType selected = GetRandomPrefabTypeForZone(currentZone);
         ObstacleType obstacleType = selected != null ? selected.obstacleType : ObstacleType.FixedOnly;
-        BaseLane lanePrefab = selected != null ? selected.prefab : null;
+        BaseLane prefab = selected?.prefab;
 
         BaseLane lane;
 
-        if (lanePrefab != null)
+        if (prefab != null)
         {
-            lane = lanePool.Rent();
+            // 프리팹에서 직접 생성
+            lane = UnityEngine.Object.Instantiate(prefab);
         }
         else
         {
             // 폴백: 동적 생성
             lane = CreateDynamicLane(type);
         }
+
+        // 위치 설정
+        lane.transform.position = new Vector3(0, 0, row);
+        lane.gameObject.SetActive(true);
 
         // 장애물 타입 파라미터 전달
         var method = lane.GetType().GetMethod("Initialize", new[] { typeof(int), typeof(ObstacleType) });

@@ -14,6 +14,7 @@ public class Bootstrap : MonoBehaviour
     [Header("레퍼런스")]
     [SerializeField] private Transform playerSpawnPoint;
     [SerializeField] private GameObject playerPrefab;
+    [SerializeField] private TerrainGenerator terrainGeneratorRef;
 
     // DI 컨테이너 (인터페이스 → 구현체 매핑)
     private Dictionary<System.Type, object> container = new Dictionary<System.Type, object>();
@@ -23,8 +24,7 @@ public class Bootstrap : MonoBehaviour
     private IPlayerController playerController;
     private ITerrainGenerator terrainGenerator;
 
-    // 오브젝트 풀
-    private ObjectPool<BaseLane> lanePool;
+    // 오브젝트 풀 (장애물만 Bootstrap에서 관리)
     private ObjectPool<BaseObstacle> obstaclePool;
 
     public static Bootstrap Instance { get; private set; }
@@ -58,18 +58,11 @@ public class Bootstrap : MonoBehaviour
     }
 
     /// <summary>
-    /// 오브젝트 풀 초기화
+    /// 오브젝트 풀 초기화 (장애물만)
     /// </summary>
     private void InitializePools()
     {
-        // 레인 풀 초기화
-        lanePool = new ObjectPool<BaseLane>(
-            () => CreateNewLane(),
-            (lane) => lane.gameObject.SetActive(true),
-            (lane) => lane.gameObject.SetActive(false)
-        );
-
-        // 장애물 풀 초기화
+        // 장애물 풀만 Bootstrap에서 관리
         obstaclePool = new ObjectPool<BaseObstacle>(
             () => CreateNewObstacle(),
             (obs) => obs.gameObject.SetActive(true),
@@ -104,23 +97,33 @@ public class Bootstrap : MonoBehaviour
         }
 
         // 지형 생성기 설정
-        var terrainObj = new GameObject("TerrainGenerator");
-        terrainObj.transform.parent = transform;
-        var terrainComp = terrainObj.AddComponent<TerrainGenerator>();
-        terrainComp.Initialize(visibleLaneCount, laneHeight, lanePool);
-        terrainGenerator = terrainComp;
+        if (terrainGeneratorRef != null)
+        {
+            terrainGeneratorRef.Initialize(visibleLaneCount, laneHeight);
+            terrainGenerator = terrainGeneratorRef;
+        }
+        else
+        {
+            Debug.LogWarning("[Bootstrap] TerrainGenerator가 인스펙터에 할당되지 않았습니다.");
+        }
 
         // DI 주입
         RegisterDependency<IGameManager>(gameManager);
         RegisterDependency<IPlayerController>(playerController);
         RegisterDependency<ITerrainGenerator>(terrainGenerator);
-        RegisterDependency<ObjectPool<BaseLane>>(lanePool);
         RegisterDependency<ObjectPool<BaseObstacle>>(obstaclePool);
 
         // 초기 레인 생성
-        for (int i = 0; i < visibleLaneCount; i++)
+        if (terrainGenerator != null)
         {
-            terrainGenerator.GenerateLaneAtRow(startRow + i);
+            for (int i = 0; i < visibleLaneCount; i++)
+            {
+                terrainGenerator.GenerateLaneAtRow(startRow + i);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[Bootstrap] TerrainGenerator가 초기화되지 않아 레인을 생성할 수 없습니다.");
         }
     }
 
@@ -142,16 +145,6 @@ public class Bootstrap : MonoBehaviour
             return (T)value;
         }
         return null;
-    }
-
-    /// <summary>
-    /// 새 레인 생성 (풀링용) - 구체적인 레인 타입 사용
-    /// </summary>
-    private BaseLane CreateNewLane()
-    {
-        var laneObj = new GameObject("Lane");
-        BaseLane lane = laneObj.AddComponent<GrassLane>(); // 기본값
-        return lane;
     }
 
     /// <summary>
