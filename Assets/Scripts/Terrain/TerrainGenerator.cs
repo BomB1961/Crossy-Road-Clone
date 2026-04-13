@@ -27,13 +27,6 @@ public class LanePrefabType
 /// </summary>
 public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
 {
-    [Header("레인 설정")]
-    [SerializeField] private int visibleLaneCount = 9;
-    [SerializeField] private float laneHeight = 1f;
-
-    [Header("구간 설정")]
-    [SerializeField] private int lanesPerZone = 10;  // 구간당 레인 수
-
     [Header("각 테마별 레인 프리팹 + 장애물 타입 배열")]
     [SerializeField] private LanePrefabType[] forestLaneOptions;   // Forest용
     [SerializeField] private LanePrefabType[] cityLaneOptions;    // City용
@@ -43,6 +36,7 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     // 구간 관리
     private ZoneType currentZone = ZoneType.Forest;
     private int lanesInCurrentZone = 0;
+    private int lanesPerZone = 10;  // Bootstrap에서 전달받음
 
     // 레인 관리 (pool 미사용, 직접 생성)
     private List<BaseLane> activeLanes = new List<BaseLane>();
@@ -51,12 +45,11 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
     public int LaneCount => activeLanes.Count;
 
     /// <summary>
-    /// 초기화
+    /// 초기화 (Bootstrap에서 호출)
     /// </summary>
-    public void Initialize(int count, float height)
+    public void Initialize(int lanesPerZone)
     {
-        visibleLaneCount = count;
-        laneHeight = height;
+        this.lanesPerZone = lanesPerZone;
     }
 
     /// <summary>
@@ -84,8 +77,11 @@ public class TerrainGenerator : MonoBehaviour, ITerrainGenerator
 
         if (prefab != null)
         {
-            // 프리팹에서 직접 생성
-            lane = UnityEngine.Object.Instantiate(prefab);
+            // GameObject 전체를 복제 (Mesh, Renderer 등 모두 포함)
+            Debug.Log($"[TerrainGenerator] Instantiate: {prefab.name}, childCount: {prefab.transform.childCount}");
+            var go = UnityEngine.Object.Instantiate(prefab.gameObject);
+            Debug.Log($"[TerrainGenerator] Instantiated GO: {go.name}, childCount: {go.transform.childCount}");
+            lane = go.GetComponent<BaseLane>();
         }
         else
         {

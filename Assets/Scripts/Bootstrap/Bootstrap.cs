@@ -7,9 +7,9 @@ using System.Collections.Generic;
 public class Bootstrap : MonoBehaviour
 {
     [Header("게임 설정")]
-    [SerializeField] private int startRow = 0;
+    private int startRow = -1;  // 1칸 뒤에서 시작
     [SerializeField] private int visibleLaneCount = 9;
-    [SerializeField] private float laneHeight = 1f;
+    [SerializeField] private int lanesPerZone = 10;  // 구간당 레인 수
 
     [Header("레퍼런스")]
     [SerializeField] private Transform playerSpawnPoint;
@@ -99,7 +99,7 @@ public class Bootstrap : MonoBehaviour
         // 지형 생성기 설정
         if (terrainGeneratorRef != null)
         {
-            terrainGeneratorRef.Initialize(visibleLaneCount, laneHeight);
+            terrainGeneratorRef.Initialize(lanesPerZone);
             terrainGenerator = terrainGeneratorRef;
         }
         else
